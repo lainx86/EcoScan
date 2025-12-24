@@ -1,21 +1,21 @@
 import os
-import uuid
 import torch
+import base64
+import io
 from fastapi import FastAPI, Request, File, UploadFile, HTTPException
-from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse
 from contextlib import asynccontextmanager
 
 import model
 import gradcam
 
 # --- Configuration ---
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-STATIC_DIR = "static"
-OUTPUT_DIR = os.path.join(STATIC_DIR, "outputs")
-
-# Ensure directories exist
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+DEVICE = torch.device("cpu") # Force CPU for HF Spaces (unless GPU space selected)
+# Note: "cuda" checks are fine, but robust deployment usually just defaults to what's available safely.
+# If the space has GPU, torch.cuda.is_available() works. If not, CPU.
+if torch.cuda.is_available():
+    DEVICE = torch.device("cuda")
 
 # --- Global Model ---
 net = None
@@ -23,34 +23,31 @@ net = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global net
-    # Load model
     try:
         net = model.load_network(DEVICE)
-        # Register hooks for Grad-CAM
         gradcam.register_hooks(net)
-        print("Model loaded and hooks registered.")
+        print(f"Model loaded on {DEVICE}")
     except Exception as e:
         print(f"Failed to load model: {e}")
     yield
-    # Cleanup
     net = None
 
 app = FastAPI(lifespan=lifespan)
-
-# --- Mounts & Templates ---
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 templates = Jinja2Templates(directory="templates")
 
 # --- Endpoints ---
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-@app.post("/predict")
+@app.post("/predict", response_class=HTMLResponse)
 async def predict(request: Request, file: UploadFile = File(...)):
     if net is None:
-        raise HTTPException(status_code=503, detail="Model not loaded")
+        return templates.TemplateResponse("index.html", {
+            "request": request,
+            "error": "Model is not loaded. Please contact administrator."
+        })
     
     if not file.content_type.startswith("image/"):
         return templates.TemplateResponse("index.html", {
@@ -64,20 +61,13 @@ async def predict(request: Request, file: UploadFile = File(...)):
         # 1. Preprocess
         input_tensor = model.preprocess_image(content)
         
-        # 2. Predict (Enable grad for Grad-CAM preparation if needed, though usually just forward is enough, 
-        # but for Grad-CAM backward pass we need to handle it carefully).
-        # We will do a standard forward pass first to get the class.
-        # Note: gradcam implementation requires a forward pass where gradients are tracked? 
-        # Actually, if we are in inference mode (torch.no_grad), .backward() will fail.
-        # So we must switch context.
-        
-        # We need to run locally with gradients enabled for Grad-CAM
+        # 2. Predict & Grad-CAM
+        # Enable grad for Grad-CAM computation
         with torch.enable_grad():
-             # Forward pass for prediction & capturing activations
              input_tensor = input_tensor.to(DEVICE)
-             input_tensor.requires_grad = True # Important for backprop to input if we wanted it, but essential for cam sometimes
+             input_tensor.requires_grad = True # Track gradients for input if strictly needed, mainly for model weights
              
-             # Re-run forward to ensure hooks capture this specific batch
+             # Forward
              outputs = net(input_tensor)
              probabilities = torch.nn.functional.softmax(outputs, dim=1)
              confidence, predicted_idx = torch.max(probabilities, 1)
@@ -85,24 +75,24 @@ async def predict(request: Request, file: UploadFile = File(...)):
              label = model.CLASSES[predicted_idx.item()]
              conf_score = confidence.item()
              
-             # 3. Generate Grad-CAM
-             # We use the prediction index as the target class
+             # Grad-CAM
              heatmap = gradcam.generate_gradcam(net, input_tensor, predicted_idx.item())
              
-        # 4. Save Result
-        filename = f"{uuid.uuid4()}.jpg"
-        output_path = os.path.join(OUTPUT_DIR, filename)
-        gradcam.save_gradcam(heatmap, content, output_path)
+        # 3. Process Grad-CAM Image to Base64
+        result_pil = gradcam.apply_heatmap(heatmap, content)
         
-        # Return result
-        # Web path is relative to static mount
-        web_path = f"/static/outputs/{filename}"
+        # Save to buffer
+        buffered = io.BytesIO()
+        result_pil.save(buffered, format="JPEG")
+        img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+        img_base64 = f"data:image/jpeg;base64,{img_str}"
         
+        # Return result with embedded image (stateless)
         return templates.TemplateResponse("index.html", {
             "request": request,
             "label": label,
             "confidence": f"{conf_score:.2%}",
-            "gradcam_image": web_path,
+            "gradcam_image": img_base64, # Base64 string
             "image_uploaded": True
         })
 
@@ -116,4 +106,5 @@ async def predict(request: Request, file: UploadFile = File(...)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)
+    # Hugging Face Spaces expects port 7860
+    uvicorn.run("app:app", host="0.0.0.0", port=7860, reload=False)

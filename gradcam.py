@@ -3,7 +3,7 @@ import torch.nn.functional as F
 from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
-import os
+import io
 
 # --- Globals for Hooks ---
 activations = None
@@ -21,8 +21,6 @@ def register_hooks(model):
     """
     Registers hooks on layer4 of ResNet18.
     """
-    # Clear previous hooks if any (though typically we just register once)
-    # targeting layer4 (last residual block)
     target_layer = model.layer4
     target_layer.register_forward_hook(forward_hook)
     target_layer.register_full_backward_hook(backward_hook)
@@ -31,11 +29,7 @@ def generate_gradcam(model, input_tensor, target_class):
     """
     Computes the Grad-CAM heatmap.
     """
-    # Ensure gradients are enabled for this specific pass even if model is in eval mode/no_grad context globally
-    # However, since we might be inside torch.no_grad() in the caller, we need to be careful.
-    # Actually, Grad-CAM requires gradients. So we must enable grad.
-    
-    input_tensor.requires_grad = True # Ensure input tracks grad if needed, or just model parameters
+    input_tensor.requires_grad = True # Ensure gradients
     
     # Forward pass
     output = model(input_tensor)
@@ -59,9 +53,9 @@ def generate_gradcam(model, input_tensor, target_class):
     
     return cam.squeeze().detach().cpu().numpy()
 
-def save_gradcam(heatmap, original_image_bytes, output_path):
+def apply_heatmap(heatmap, original_image_bytes):
     """
-    Overlays heatmap on original image and saves to disk.
+    Overlays heatmap on original image and returns a PIL Image.
     """
     # Load original image
     img = Image.open(io.BytesIO(original_image_bytes)).convert("RGB")
@@ -83,8 +77,6 @@ def save_gradcam(heatmap, original_image_bytes, output_path):
     overlayed = (1 - alpha) * img_np + alpha * heatmap_colored
     overlayed = np.clip(overlayed, 0, 1)
     
-    # Save
-    plt.imsave(output_path, overlayed)
-    return output_path
-
-import io # imported here for the save_gradcam function
+    # Convert back to uint8 PIL Image
+    result_img = Image.fromarray((overlayed * 255).astype(np.uint8))
+    return result_img

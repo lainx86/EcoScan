@@ -4,7 +4,6 @@ python-multipart
 torch
 torchvision
 pillow
-matplotlib
 numpy
+matplotlib
 jinja2
-aiofiles
