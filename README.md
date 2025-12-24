@@ -1,3 +1,13 @@
+---
+title: EcoScan
+emoji: 🪸
+colorFrom: blue
+colorTo: green
+sdk: docker
+pinned: false
+app_port: 7860
+---
+
 # 🪸 EcoScan: Marine Forensic AI
 
 **EcoScan** is a multimodal scientific analyzer designed to assess coral health. Using deep learning (ResNet18) and computer vision (Grad-CAM), it classifies coral images as **Healthy** or **Bleached** and provides visual explainability for its diagnoses.
