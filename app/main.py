@@ -32,14 +32,77 @@ async def lifespan(app: FastAPI):
     yield
     net = None
 
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+# ... (Previous imports remain same, just ensuring this goes to the top is tricky with replace_file_content if I don't select the whole block. I'll stick to a calculated replace or just use multi_replace carefully)
+
 app = FastAPI(lifespan=lifespan)
-templates = Jinja2Templates(directory="templates")
+
+# --- CORS Configuration ---
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins (including feby.dev)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+templates = Jinja2Templates(directory="app/templates")
 
 # --- Endpoints ---
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
+@app.post("/api/predict")
+async def predict_api(file: UploadFile = File(...)):
+    """
+    JSON Endpoint for external frontends (e.g. feby.dev)
+    """
+    if net is None:
+        return JSONResponse(content={"error": "Model not loaded"}, status_code=503)
+    
+    if not file.content_type.startswith("image/"):
+        return JSONResponse(content={"error": "Invalid file type"}, status_code=400)
+
+    try:
+        content = await file.read()
+        
+        # 1. Preprocess
+        input_tensor = model.preprocess_image(content)
+        
+        # 2. Predict & Grad-CAM
+        with torch.enable_grad():
+             input_tensor = input_tensor.to(DEVICE)
+             input_tensor.requires_grad = True
+             
+             outputs = net(input_tensor)
+             probabilities = torch.nn.functional.softmax(outputs, dim=1)
+             confidence, predicted_idx = torch.max(probabilities, 1)
+             
+             label = model.CLASSES[predicted_idx.item()]
+             conf_score = confidence.item()
+             
+             heatmap = gradcam.generate_gradcam(net, input_tensor, predicted_idx.item())
+             
+        # 3. Process Grad-CAM Image to Base64
+        result_pil = gradcam.apply_heatmap(heatmap, content)
+        
+        buffered = io.BytesIO()
+        result_pil.save(buffered, format="JPEG")
+        img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+        img_base64 = f"data:image/jpeg;base64,{img_str}"
+        
+        return {
+            "label": label,
+            "confidence": conf_score,
+            "gradcam_image": img_base64
+        }
+
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
 
 @app.post("/predict", response_class=HTMLResponse)
 async def predict(request: Request, file: UploadFile = File(...)):
