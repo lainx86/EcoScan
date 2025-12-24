@@ -2,6 +2,8 @@
 
 **EcoScan** is a multimodal scientific analyzer designed to assess coral health. Using deep learning (ResNet18) and computer vision (Grad-CAM), it classifies coral images as **Healthy** or **Bleached** and provides visual explainability for its diagnoses.
 
+[![Open in Spaces](https://huggingface.co/datasets/huggingface/badges/raw/main/open-in-hf-spaces-sm-dark.svg)](https://huggingface.co/spaces/feby404/EcoScan)
+
 ## ✨ Features
 
 - **AI-Powered Diagnosis**: Utilizing a fine-tuned ResNet18 model for accurate binary classification.
