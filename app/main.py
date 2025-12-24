@@ -7,8 +7,8 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from contextlib import asynccontextmanager
 
-import model
-import gradcam
+from app.ml import model
+from app.ml import gradcam
 
 # --- Configuration ---
 DEVICE = torch.device("cpu") # Force CPU for HF Spaces (unless GPU space selected)
