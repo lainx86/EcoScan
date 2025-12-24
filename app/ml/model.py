@@ -4,8 +4,11 @@ from torchvision import models
 from PIL import Image
 import io
 
+import os
+
 # --- Configuration ---
-MODEL_PATH = "coral_bleaching_resnet18.pt"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+MODEL_PATH = os.path.join(BASE_DIR, "coral_bleaching_resnet18.pt")
 CLASSES = ["Bleached", "Healthy"]
 
 def load_network(device):

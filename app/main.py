@@ -37,6 +37,8 @@ from fastapi.responses import JSONResponse
 
 # ... (Previous imports remain same, just ensuring this goes to the top is tricky with replace_file_content if I don't select the whole block. I'll stick to a calculated replace or just use multi_replace carefully)
 
+from fastapi.staticfiles import StaticFiles
+
 app = FastAPI(lifespan=lifespan)
 
 # --- CORS Configuration ---
@@ -48,7 +50,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-templates = Jinja2Templates(directory="app/templates")
+# Robust path resolution
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "app/static")), name="static")
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "app/templates"))
 
 # --- Endpoints ---
 
