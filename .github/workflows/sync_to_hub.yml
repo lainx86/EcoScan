@@ -16,4 +16,4 @@ jobs:
       - name: Push to hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: git push https://feby404:$HF_TOKEN@huggingface.co/spaces/feby404/EcoScan main
+        run: git push --force https://feby404:$HF_TOKEN@huggingface.co/spaces/feby404/EcoScan main
