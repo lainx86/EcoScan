@@ -67,6 +67,10 @@ EcoScan/
     └── outputs/        # Generated Grad-CAM results
 ```
 
+## 📊 Dataset
+
+The model was trained using the **[Coral Reefs Images](https://www.kaggle.com/datasets/asfarhossainsitab/coral-reefs-images)** dataset by Asfar Hossain Sitab on Kaggle.
+
 ## 📄 License
 
 [MIT](LICENSE)
