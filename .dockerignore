@@ -1,7 +1,0 @@
-.git
-__pycache__
-samples/
-app/static/outputs/
-venv/
-.env
-*.pyc

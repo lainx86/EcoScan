@@ -1,9 +1,5 @@
-fastapi
-uvicorn
-python-multipart
 torch
 torchvision
 pillow
 numpy
 matplotlib
-jinja2
