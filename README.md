@@ -7,11 +7,11 @@ sdk: docker
 pinned: false
 ---
 
-# 🪸 EcoScan: Marine Forensic AI
+# EcoScan: Coral Bleaching Detection
 
 **EcoScan** is a desktop application designed to assess coral health. Using deep learning (ResNet18) and computer vision (Grad-CAM), it classifies coral images as **Healthy** or **Bleached** and provides visual explainability for its diagnoses.
 
-## ✨ Features
+## Features
 
 - **Desktop Application**: A standalone Windows Desktop App built with Tkinter.
 - **AI-Powered Diagnosis**: Utilizing a fine-tuned ResNet18 model for accurate binary classification.
@@ -19,13 +19,13 @@ pinned: false
 - **Modern Dark UI**: Sleek, dark-themed interface.
 - **Real-time Inference**: Fast, local inference on CPU or GPU.
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Core**: Python, PyTorch, Torchvision
 - **GUI**: Tkinter
 - **Utilities**: Pillow, Matplotlib, Numpy
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -52,15 +52,40 @@ pinned: false
 
 ### Usage
 
-**Option 1: One-Click Launch**
-Double-click `run_app.bat`
+**Option 1: Pre-built Executable (Distribution)**
+If you have the distributed folder:
+1. Open the `EcoScan` folder.
+2. Double-click `EcoScan.exe`.
 
-**Option 2: Command Line**
+**Option 2: Run from Source**
+See "Development" below.
+
+## Development
+
+### Running with Python
 ```bash
 python desktop_app.py
 ```
+or use the launcher:
+```bash
+run_app.bat
+```
 
-## 📂 Project Structure
+### Building the Executable
+To create a standalone `.exe` for distribution:
+
+1. Install PyInstaller:
+   ```bash
+   pip install pyinstaller
+   ```
+2. Run the build script:
+   ```bash
+   build_exe.bat
+   ```
+3. The executable will be created in `dist/EcoScan/EcoScan.exe`.
+   You can zip the `dist/EcoScan` folder and share it with others.
+
+## Project Structure
 
 ```
 EcoScan/
@@ -72,10 +97,10 @@ EcoScan/
 └── README.md           # Documentation
 ```
 
-## 📊 Dataset
+## Dataset
 
 The model was trained using the **[Coral Reefs Images](https://www.kaggle.com/datasets/asfarhossainsitab/coral-reefs-images)** dataset by Asfar Hossain Sitab on Kaggle.
 
-## 📄 License
+## License
 
 [MIT](LICENSE)

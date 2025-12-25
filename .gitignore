@@ -5,3 +5,8 @@ venv/
 .DS_Store
 static/outputs/*
 samples/
+
+# PyInstaller
+build/
+dist/
+*.spec
