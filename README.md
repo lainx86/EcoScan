@@ -1,12 +1,3 @@
----
-title: EcoScan
-emoji: 🪸
-colorFrom: blue
-colorTo: green
-sdk: docker
-pinned: false
----
-
 # EcoScan: Coral Bleaching Detection
 
 **EcoScan** is a desktop application designed to assess coral health. Using deep learning (ResNet18) and computer vision (Grad-CAM), it classifies coral images as **Healthy** or **Bleached** and provides visual explainability for its diagnoses.
